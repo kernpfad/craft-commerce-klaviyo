@@ -19,8 +19,12 @@ use craft\commerce\services\Inventory;
 use craft\commerce\services\OrderHistories;
 use craft\commerce\services\Payments;
 use craft\events\ModelEvent;
+use craft\events\RegisterComponentTypesEvent;
 use craft\events\TemplateEvent;
+use craft\services\Fields;
 use craft\web\View;
+use kernpfad\commerceklaviyo\fields\ListField;
+use kernpfad\commerceklaviyo\fields\ListsField;
 use kernpfad\commerceklaviyo\models\Settings;
 use kernpfad\commerceklaviyo\services\BackInStockSubscriptionService;
 use kernpfad\commerceklaviyo\services\CatalogSyncService;
@@ -69,6 +73,15 @@ class CommerceKlaviyo extends Plugin
         if (Craft::$app->getRequest()->getIsConsoleRequest()) {
             $this->controllerNamespace = 'kernpfad\\commerceklaviyo\\console\\controllers';
         }
+
+        Event::on(
+            Fields::class,
+            Fields::EVENT_REGISTER_FIELD_TYPES,
+            static function(RegisterComponentTypesEvent $event): void {
+                $event->types[] = ListField::class;
+                $event->types[] = ListsField::class;
+            }
+        );
 
         $this->set('catalogSync', function() {
             $settings = $this->getSettings();
