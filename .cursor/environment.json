@@ -1,0 +1,8 @@
+{
+    "name": "Commerce Klaviyo",
+    "user": "ubuntu",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "install": "composer install --prefer-dist --no-interaction --no-progress"
+}

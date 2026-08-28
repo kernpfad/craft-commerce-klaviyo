@@ -1,0 +1,974 @@
+{% import "_includes/forms" as forms %}
+
+<div class="flex-fields" id="commerce-klaviyo-settings">
+    <div class="pane-tabs">
+        <div class="scrollable" role="tablist" aria-label="{{ 'Settings sections'|t('commerce-klaviyo') }}">
+            <a href="#general" role="tab" data-tab-id="general" aria-controls="tab-panel-general">
+                <span class="tab-label">{{ "General"|t('commerce-klaviyo') }}</span>
+            </a>
+            <a href="#catalogSync" role="tab" data-tab-id="catalogSync" aria-controls="tab-panel-catalogSync" class="{{ (lastCatalogError or lastTrackError) ? 'error' }}">
+                <span class="tab-label">
+                    {{ "Catalog sync"|t('commerce-klaviyo') }}
+                    {% if lastCatalogError or lastTrackError %}<span data-icon="alert"></span>{% endif %}
+                </span>
+            </a>
+            <a href="#orderTracking" role="tab" data-tab-id="orderTracking" aria-controls="tab-panel-orderTracking">
+                <span class="tab-label">{{ "Order tracking"|t('commerce-klaviyo') }}</span>
+            </a>
+            <a href="#newsletterSignup" role="tab" data-tab-id="newsletterSignup" aria-controls="tab-panel-newsletterSignup">
+                <span class="tab-label">{{ "Newsletter signup"|t('commerce-klaviyo') }}</span>
+            </a>
+            <a href="#backInStock" role="tab" data-tab-id="backInStock" aria-controls="tab-panel-backInStock">
+                <span class="tab-label">{{ "Back in stock"|t('commerce-klaviyo') }}</span>
+            </a>
+            <a href="#webhooks" role="tab" data-tab-id="webhooks" aria-controls="tab-panel-webhooks">
+                <span class="tab-label">{{ "Inbound webhooks"|t('commerce-klaviyo') }}</span>
+            </a>
+            <a href="#onsiteTracking" role="tab" data-tab-id="onsiteTracking" aria-controls="tab-panel-onsiteTracking">
+                <span class="tab-label">{{ "Onsite tracking"|t('commerce-klaviyo') }}</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="tab-panel" id="tab-panel-general" data-tab-panel="general">
+        {{ forms.autosuggestField({
+            label: "Klaviyo private API key"|t('commerce-klaviyo'),
+            instructions: "A private API key from your Klaviyo account (Settings → API Keys), needs the events, profiles, catalogs (read + write), lists, and back-in-stock-subscriptions write scopes (lists read scope for the newsletter list picker). Accepts an environment variable reference (e.g. $KLAVIYO_API_KEY) so the real key never has to be committed to project config."|t('commerce-klaviyo'),
+            id: 'apiKey',
+            name: 'apiKey',
+            value: settings.apiKey,
+            suggestEnvVars: true,
+        }) }}
+
+        <div id="commerce-klaviyo-test" class="field">
+            <button type="button" class="btn" id="commerce-klaviyo-test-run">{{ "Test connection"|t('commerce-klaviyo') }}</button>
+            <span id="commerce-klaviyo-test-result" class="hidden" style="margin-left: 1rem;"></span>
+        </div>
+
+        {% js %}
+        (function () {
+            const btn = document.getElementById({{ 'commerce-klaviyo-test-run'|namespaceInputId|json_encode|raw }});
+            const result = document.getElementById({{ 'commerce-klaviyo-test-result'|namespaceInputId|json_encode|raw }});
+            if (!btn || !result) return;
+
+            btn.addEventListener('click', async () => {
+                btn.setAttribute('disabled', 'disabled');
+                result.classList.add('hidden');
+
+                const body = new FormData();
+                body.append(Craft.csrfTokenName, Craft.csrfTokenValue);
+
+                try {
+                    const response = await fetch('{{ actionUrl('commerce-klaviyo/cp/test/run') }}', {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json' },
+                        body,
+                    });
+                    const data = await response.json();
+                    result.textContent = data.message;
+                    result.className = data.success ? 'success' : 'error';
+                } catch (error) {
+                    result.textContent = String(error);
+                    result.className = 'error';
+                } finally {
+                    btn.removeAttribute('disabled');
+                }
+            });
+        })();
+        {% endjs %}
+
+        {{ forms.textField({
+            label: "Queue component ID"|t('commerce-klaviyo'),
+            instructions: "The Yii application component this plugin's sync jobs are pushed to. Leave as `queue` to use Craft's own default queue. Set this to a different component ID — defined in `config/app.php`, backed by a real message-queue driver (SQS, RabbitMQ, Redis, via a yii2-queue package) — to isolate Klaviyo sync traffic from the rest of the site's queue jobs. Falls back to the default queue if the configured component isn't available."|t('commerce-klaviyo'),
+            id: 'queueComponentId',
+            name: 'queueComponentId',
+            value: settings.queueComponentId,
+            placeholder: 'queue',
+        }) }}
+    </div>
+
+    <div class="tab-panel hidden" id="tab-panel-catalogSync" data-tab-panel="catalogSync">
+        <div id="commerce-klaviyo-notices">
+            {% if lastCatalogError %}
+                <div class="commerce-klaviyo-notice" data-status-category="catalog">
+                    <span data-icon="alert" aria-hidden="true"></span>
+                    <div>
+                        <strong>{{ "Last catalog sync error"|t('commerce-klaviyo') }}</strong>
+                        <p>{{ "{time}: {message}"|t('commerce-klaviyo', {
+                            time: lastCatalogError.at|datetime('short'),
+                            message: lastCatalogError.message,
+                        }) }}</p>
+                    </div>
+                    <button type="button" class="commerce-klaviyo-notice-dismiss" aria-label="{{ 'Dismiss'|t('commerce-klaviyo') }}">&times;</button>
+                </div>
+            {% endif %}
+
+            {% if lastTrackError %}
+                <div class="commerce-klaviyo-notice" data-status-category="track">
+                    <span data-icon="alert" aria-hidden="true"></span>
+                    <div>
+                        <strong>{{ "Last event track error"|t('commerce-klaviyo') }}</strong>
+                        <p>{{ "{time}: {message}"|t('commerce-klaviyo', {
+                            time: lastTrackError.at|datetime('short'),
+                            message: lastTrackError.message,
+                        }) }}</p>
+                    </div>
+                    <button type="button" class="commerce-klaviyo-notice-dismiss" aria-label="{{ 'Dismiss'|t('commerce-klaviyo') }}">&times;</button>
+                </div>
+            {% endif %}
+        </div>
+
+        {% css %}
+        .commerce-klaviyo-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: var(--radius-lg);
+            background: var(--bg-error);
+            color: var(--fg-error);
+            margin-bottom: 14px;
+        }
+        .commerce-klaviyo-notice [data-icon] {
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .commerce-klaviyo-notice > div {
+            flex-grow: 1;
+            min-width: 0;
+        }
+        .commerce-klaviyo-notice strong {
+            display: block;
+        }
+        .commerce-klaviyo-notice p {
+            margin: 2px 0 0;
+            color: inherit;
+            word-break: break-word;
+        }
+        .commerce-klaviyo-notice-dismiss {
+            flex-shrink: 0;
+            background: transparent;
+            border: 0;
+            color: inherit;
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+            padding: 2px 4px;
+            opacity: 0.7;
+        }
+        .commerce-klaviyo-notice-dismiss:hover {
+            opacity: 1;
+        }
+        {% endcss %}
+
+        {% js %}
+        (function () {
+            const container = document.getElementById({{ 'commerce-klaviyo-notices'|namespaceInputId|json_encode|raw }});
+            if (!container) return;
+
+            container.querySelectorAll('.commerce-klaviyo-notice-dismiss').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    const notice = btn.closest('.commerce-klaviyo-notice');
+                    const category = notice?.dataset.statusCategory;
+                    if (!category) return;
+
+                    btn.setAttribute('disabled', 'disabled');
+
+                    const body = new FormData();
+                    body.append(Craft.csrfTokenName, Craft.csrfTokenValue);
+                    body.append('category', category);
+
+                    try {
+                        const response = await fetch('{{ actionUrl('commerce-klaviyo/cp/status/dismiss') }}', {
+                            method: 'POST',
+                            headers: { Accept: 'application/json' },
+                            body,
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            notice.remove();
+                        } else {
+                            btn.removeAttribute('disabled');
+                        }
+                    } catch (error) {
+                        btn.removeAttribute('disabled');
+                    }
+                });
+            });
+        })();
+        {% endjs %}
+
+        <div class="field" id="commerce-klaviyo-catalog-health">
+            <div class="heading">
+                <label>{{ "Catalog health"|t('commerce-klaviyo') }}</label>
+            </div>
+            <div class="instructions">
+                {% if lastCatalogSuccess %}
+                    <p>{{ "Last successful catalog sync: {time}"|t('commerce-klaviyo', { time: lastCatalogSuccess.at|datetime('short') }) }}</p>
+                {% else %}
+                    <p>{{ "No successful catalog sync recorded yet."|t('commerce-klaviyo') }}</p>
+                {% endif %}
+                {% if lastReindex %}
+                    <p>{{ "Last reindex queued {time}: {products} product(s), {variants} variant(s) in {itemJobs} bulk item job(s) and {variantJobs} bulk variant job(s)."|t('commerce-klaviyo', {
+                        time: lastReindex.at|datetime('short'),
+                        products: lastReindex.productCount,
+                        variants: lastReindex.variantCount,
+                        itemJobs: lastReindex.itemJobCount,
+                        variantJobs: lastReindex.variantJobCount,
+                    }) }}</p>
+                {% endif %}
+                {% if lastBulkJob %}
+                    <p>{{ "Last bulk Klaviyo job ({type}, {time}): status {status}, {completed}/{total} completed, {failed} failed."|t('commerce-klaviyo', {
+                        type: lastBulkJob.type,
+                        time: lastBulkJob.at|datetime('short'),
+                        status: lastBulkJob.status,
+                        completed: lastBulkJob.completedCount,
+                        total: lastBulkJob.totalCount,
+                        failed: lastBulkJob.failedCount,
+                    }) }}</p>
+                {% endif %}
+                <p>{{ "Look up a Craft element ID in Klaviyo (same value as `external_id`). Requires the catalogs read scope."|t('commerce-klaviyo') }}</p>
+            </div>
+            <div class="input flex" style="gap: 0.5rem; align-items: flex-end; flex-wrap: wrap;">
+                {{ forms.selectField({
+                    id: 'catalogLookupType',
+                    name: 'catalogLookupType',
+                    options: [
+                        { label: "Catalog variant"|t('commerce-klaviyo'), value: 'variant' },
+                        { label: "Catalog item (product)"|t('commerce-klaviyo'), value: 'item' },
+                    ],
+                    value: 'variant',
+                }) }}
+                {{ forms.textField({
+                    label: "Craft element ID"|t('commerce-klaviyo'),
+                    id: 'catalogLookupExternalId',
+                    name: 'catalogLookupExternalId',
+                    value: '',
+                    size: 10,
+                }) }}
+                <button type="button" class="btn" id="commerce-klaviyo-catalog-lookup-run">{{ "Look up in Klaviyo"|t('commerce-klaviyo') }}</button>
+            </div>
+            <p id="commerce-klaviyo-catalog-lookup-result" class="light hidden" style="margin-top: 0.75rem;"></p>
+        </div>
+
+        {% js %}
+        (function () {
+            const btn = document.getElementById({{ 'commerce-klaviyo-catalog-lookup-run'|namespaceInputId|json_encode|raw }});
+            const typeField = document.getElementById({{ 'catalogLookupType'|namespaceInputId|json_encode|raw }});
+            const externalIdField = document.getElementById({{ 'catalogLookupExternalId'|namespaceInputId|json_encode|raw }});
+            const result = document.getElementById({{ 'commerce-klaviyo-catalog-lookup-result'|namespaceInputId|json_encode|raw }});
+            if (!btn || !typeField || !externalIdField || !result) return;
+
+            btn.addEventListener('click', async () => {
+                btn.setAttribute('disabled', 'disabled');
+                result.classList.add('hidden');
+
+                const body = new FormData();
+                body.append(Craft.csrfTokenName, Craft.csrfTokenValue);
+                body.append('type', typeField.value);
+                body.append('externalId', externalIdField.value);
+
+                try {
+                    const response = await fetch('{{ actionUrl('commerce-klaviyo/cp/health/lookup') }}', {
+                        method: 'POST',
+                        headers: { Accept: 'application/json' },
+                        body,
+                    });
+                    const data = await response.json();
+
+                    if (!data.success) {
+                        result.textContent = data.message || 'Lookup failed.';
+                        result.className = 'error';
+                        result.classList.remove('hidden');
+                        return;
+                    }
+
+                    if (!data.found) {
+                        result.textContent = data.message || 'Not found in Klaviyo.';
+                        result.className = 'light';
+                        result.classList.remove('hidden');
+                        return;
+                    }
+
+                    const parts = [
+                        data.title ? `title: ${data.title}` : null,
+                        data.sku ? `sku: ${data.sku}` : null,
+                        data.inventoryQuantity !== undefined && data.inventoryQuantity !== null ? `inventory: ${data.inventoryQuantity}` : null,
+                        data.published !== undefined && data.published !== null ? `published: ${data.published}` : null,
+                        data.id ? `id: ${data.id}` : null,
+                    ].filter(Boolean);
+
+                    result.textContent = parts.join(' · ');
+                    result.className = 'success';
+                    result.classList.remove('hidden');
+                } catch (error) {
+                    result.textContent = String(error);
+                    result.className = 'error';
+                    result.classList.remove('hidden');
+                } finally {
+                    btn.removeAttribute('disabled');
+                }
+            });
+        })();
+        {% endjs %}
+
+        <div class="field" id="commerce-klaviyo-sync">
+            <div class="heading">
+                <label>{{ "Sync now"|t('commerce-klaviyo') }}</label>
+            </div>
+            <div class="instructions">
+                <p>{{ "Re-queues every published product and its variants for a full catalog resync using Klaviyo's bulk catalog jobs (up to 100 resources per API call) — the same one-off operation as `php craft commerce-klaviyo/reindex`."|t('commerce-klaviyo') }}</p>
+            </div>
+            <div class="input">
+                <button type="button" class="btn" id="commerce-klaviyo-sync-run">{{ "Sync now"|t('commerce-klaviyo') }}</button>
+            </div>
+            <div id="commerce-klaviyo-sync-status" class="hidden" style="margin-top: 10px;">
+                <progress id="commerce-klaviyo-sync-progress" value="0" max="100" style="width: 100%; display: block;"></progress>
+                <p id="commerce-klaviyo-sync-message" class="light" style="margin-top: 4px;"></p>
+            </div>
+        </div>
+
+        {% js %}
+        (function () {
+            const runBtn = document.getElementById({{ 'commerce-klaviyo-sync-run'|namespaceInputId|json_encode|raw }});
+            const statusEl = document.getElementById({{ 'commerce-klaviyo-sync-status'|namespaceInputId|json_encode|raw }});
+            const progressEl = document.getElementById({{ 'commerce-klaviyo-sync-progress'|namespaceInputId|json_encode|raw }});
+            const messageEl = document.getElementById({{ 'commerce-klaviyo-sync-message'|namespaceInputId|json_encode|raw }});
+            if (!runBtn) return;
+
+            const MAX_POLLS = 400; // ~10 minutes at the 1.5s interval below
+            let pollTimer = null;
+            let pollCount = 0;
+
+            function stopPolling() {
+                if (pollTimer) {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                }
+            }
+
+            // Craft's queue table only ever drops a job once it *succeeds*
+            // -- a failed job stays in the table (status 4) so it's still
+            // visible in Utilities -> Queue Manager for manual retry. That
+            // means `total` alone never reaches 0 if anything failed, and
+            // treating "still counted" as "still pending" got this stuck
+            // at 0% forever on a real failure instead of finishing.
+            // Watching each job's own status (1 waiting / 2 reserved / 4
+            // failed -- 3/done rows are gone, never listed at all) tells
+            // "still working" and "gave up on this one" apart.
+            const STATUS_WAITING = 1;
+            const STATUS_RESERVED = 2;
+            const STATUS_FAILED = 4;
+
+            async function poll(baselineTotal) {
+                pollCount++;
+
+                if (pollCount > MAX_POLLS) {
+                    stopPolling();
+                    messageEl.textContent = '{{ "Still running in the background — check Utilities → Queue Manager."|t('commerce-klaviyo')|e('js') }}';
+                    runBtn.removeAttribute('disabled');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(Craft.getActionUrl('queue/get-job-info') + '?limit=500', {
+                        headers: { Accept: 'application/json' },
+                    });
+                    const data = await response.json();
+                    const jobs = data.jobs || [];
+                    const active = jobs.filter((job) => job.status === STATUS_WAITING || job.status === STATUS_RESERVED).length;
+                    const failed = jobs.filter((job) => job.status === STATUS_FAILED).length;
+
+                    if (active <= 0) {
+                        stopPolling();
+                        progressEl.value = 100;
+                        const succeeded = Math.max(0, baselineTotal - failed);
+                        messageEl.textContent = failed > 0
+                            ? `${succeeded} / ${baselineTotal} {{ "succeeded"|t('commerce-klaviyo')|e('js') }}, ${failed} {{ "failed (check Utilities → Queue Manager). Reloading…"|t('commerce-klaviyo')|e('js') }}`
+                            : '{{ "Sync complete. Reloading…"|t('commerce-klaviyo')|e('js') }}';
+                        setTimeout(() => location.reload(), 1500);
+                        return;
+                    }
+
+                    const done = Math.max(0, baselineTotal - active - failed);
+                    const pct = baselineTotal > 0 ? Math.min(99, Math.round((done / baselineTotal) * 100)) : 0;
+                    progressEl.value = pct;
+                    messageEl.textContent = failed > 0
+                        ? `${done} / ${baselineTotal} {{ "processed"|t('commerce-klaviyo')|e('js') }} (${failed} {{ "failed"|t('commerce-klaviyo')|e('js') }})…`
+                        : `${done} / ${baselineTotal} {{ "jobs processed…"|t('commerce-klaviyo')|e('js') }}`;
+                } catch (error) {
+                    // A transient network hiccup shouldn't stop polling.
+                }
+            }
+
+            runBtn.addEventListener('click', async () => {
+                runBtn.setAttribute('disabled', 'disabled');
+                statusEl.classList.remove('hidden');
+                progressEl.removeAttribute('value');
+                messageEl.textContent = '{{ "Queueing products…"|t('commerce-klaviyo')|e('js') }}';
+
+                const body = new FormData();
+                body.append(Craft.csrfTokenName, Craft.csrfTokenValue);
+
+                try {
+                    const response = await fetch('{{ actionUrl('commerce-klaviyo/cp/sync/run') }}', {
+                        method: 'POST',
+                        headers: { Accept: 'application/json' },
+                        body,
+                    });
+                    const data = await response.json();
+
+                    if (!data.success) {
+                        messageEl.textContent = data.message || '{{ "Sync failed."|t('commerce-klaviyo')|e('js') }}';
+                        runBtn.removeAttribute('disabled');
+                        return;
+                    }
+
+                    if (data.productCount === 0) {
+                        progressEl.value = 100;
+                        messageEl.textContent = '{{ "No products found to sync."|t('commerce-klaviyo')|e('js') }}';
+                        runBtn.removeAttribute('disabled');
+                        return;
+                    }
+
+                    // Kick off processing right away instead of waiting for
+                    // Craft's own automatic post-request queue trigger on
+                    // the next page load.
+                    const runBody = new FormData();
+                    runBody.append(Craft.csrfTokenName, Craft.csrfTokenValue);
+                    fetch(Craft.getActionUrl('queue/run'), { method: 'POST', body: runBody });
+
+                    const baselineTotal = (data.itemJobCount || 0) + (data.variantJobCount || 0);
+
+                    progressEl.setAttribute('value', '0');
+                    messageEl.textContent = `${data.productCount} {{ "products"|t('commerce-klaviyo')|e('js') }} / ${data.variantCount} {{ "variants queued in"|t('commerce-klaviyo')|e('js') }} ${baselineTotal} {{ "bulk job(s)…"|t('commerce-klaviyo')|e('js') }}`;
+
+                    pollCount = 0;
+                    pollTimer = setInterval(() => poll(baselineTotal), 1500);
+                } catch (error) {
+                    messageEl.textContent = String(error);
+                    runBtn.removeAttribute('disabled');
+                }
+            });
+        })();
+        {% endjs %}
+
+        {{ forms.selectField({
+            label: "Title field"|t('commerce-klaviyo'),
+            instructions: "Custom field whose value becomes the Klaviyo catalog title (checked on the variant first, then the product). Leave unset to use the product's — or variant's — own native title."|t('commerce-klaviyo'),
+            id: 'titleFieldHandle',
+            name: 'titleFieldHandle',
+            value: settings.titleFieldHandle,
+            options: [{ label: "Use the native title"|t('commerce-klaviyo'), value: '' }]|merge(catalogFieldOptions),
+        }) }}
+
+        {{ forms.selectField({
+            label: "Description field"|t('commerce-klaviyo'),
+            instructions: "Custom field whose value becomes the Klaviyo catalog description. Leave unset to use the (possibly also overridden) title instead."|t('commerce-klaviyo'),
+            id: 'descriptionFieldHandle',
+            name: 'descriptionFieldHandle',
+            value: settings.descriptionFieldHandle,
+            options: [{ label: "Use the title"|t('commerce-klaviyo'), value: '' }]|merge(catalogFieldOptions),
+        }) }}
+
+        {{ forms.selectField({
+            label: "Image field"|t('commerce-klaviyo'),
+            instructions: "Assets field for catalog images. Checked on the variant first, then the product. The first usable asset becomes image_full_url and image_thumbnail_url; every usable asset URL is sent in Klaviyo's images array. Leave unset to omit images."|t('commerce-klaviyo'),
+            id: 'imageFieldHandle',
+            name: 'imageFieldHandle',
+            value: settings.imageFieldHandle,
+            options: [{ label: "Omit the image"|t('commerce-klaviyo'), value: '' }]|merge(catalogImageFieldOptions),
+        }) }}
+
+        {{ forms.selectField({
+            label: "Categories field"|t('commerce-klaviyo'),
+            instructions: "Categories field on products whose selected categories are synced to Klaviyo as catalog categories and linked to the item — this is what makes a product show up under Klaviyo's own Categories, separate from the metadata mapping below. Leave unset to skip category syncing. Only re-links current categories on each sync; removing a category from a product in Craft doesn't unlink it in Klaviyo yet."|t('commerce-klaviyo'),
+            id: 'categoriesFieldHandle',
+            name: 'categoriesFieldHandle',
+            value: settings.categoriesFieldHandle,
+            options: [{ label: "Don't sync categories"|t('commerce-klaviyo'), value: '' }]|merge(catalogCategoriesFieldOptions),
+        }) }}
+
+        {{ forms.editableTableField({
+            label: "Catalog metadata field mapping"|t('commerce-klaviyo'),
+            instructions: "Checked on the variant first, then the product, so a per-variant promo price and a product-wide one both work. Sent in Klaviyo's catalog item/variant `custom_metadata` object, alongside the standard title/description/price/image attributes — use this for anything Klaviyo has no dedicated catalog attribute for, such as a strike-through or promotional price. Plain text, number, lightswitch, and Money fields resolve to their own value. A Categories/Entries/Tags/Assets field offers `.id`/`.title` variants; a Dropdown/Radio Buttons/Checkboxes/Multi-select field offers `.value`/`.label` variants — both resolve to a comma-joined list of whatever's selected, since the field itself has no single value. Anything else isn't offered here — it wouldn't resolve to anything Klaviyo would accept. Only shows fields that exist on a product or variant field layout — if the field you need isn't listed, add it to a product type first."|t('commerce-klaviyo'),
+            id: 'catalogFieldMappingTable',
+            name: 'catalogFieldMappingTable',
+            cols: {
+                fieldHandle: {
+                    type: 'select',
+                    heading: "Craft field"|t('commerce-klaviyo'),
+                    options: [{ label: "Select a field…"|t('commerce-klaviyo'), value: '' }]|merge(catalogMetadataFieldOptions),
+                },
+                klaviyoKey: {
+                    type: 'singleline',
+                    heading: "Klaviyo metadata key"|t('commerce-klaviyo'),
+                    placeholder: 'compare_at_price',
+                },
+            },
+            rows: settings.catalogFieldMappingTable,
+            addRowLabel: "Add a mapping"|t('commerce-klaviyo'),
+            allowAdd: true,
+            allowDelete: true,
+            allowReorder: true,
+        }) }}
+    </div>
+
+    <div class="tab-panel hidden" id="tab-panel-orderTracking" data-tab-panel="orderTracking">
+        {{ forms.checkboxField({
+            label: "Track Updated Cart"|t('commerce-klaviyo'),
+            instructions: "When on (default), incomplete carts with an email send Klaviyo’s \"Updated Cart\" event only if line items or the order total change — address-only saves are ignored. Turn off if you rely solely on onsite \"Added to Cart\" or want less event volume."|t('commerce-klaviyo'),
+            id: 'trackUpdatedCart',
+            name: 'trackUpdatedCart',
+            checked: settings.trackUpdatedCart,
+        }) }}
+
+        {{ forms.checkboxSelectField({
+            label: "Order statuses that mean \"fulfilled\""|t('commerce-klaviyo'),
+            instructions: "Selecting one of these statuses sends Klaviyo's standard \"Fulfilled Order\" event."|t('commerce-klaviyo'),
+            id: 'fulfilledStatusHandles',
+            name: 'fulfilledStatusHandles',
+            values: settings.fulfilledStatusHandles,
+            options: orderStatuses|map(status => { label: status.name, value: status.handle }),
+        }) }}
+
+        {{ forms.checkboxSelectField({
+            label: "Order statuses that mean \"cancelled\""|t('commerce-klaviyo'),
+            instructions: "Selecting one of these statuses sends Klaviyo's standard \"Cancelled Order\" event."|t('commerce-klaviyo'),
+            id: 'cancelledStatusHandles',
+            name: 'cancelledStatusHandles',
+            values: settings.cancelledStatusHandles,
+            options: orderStatuses|map(status => { label: status.name, value: status.handle }),
+        }) }}
+
+        {{ forms.textareaField({
+            label: "Profile field mapping"|t('commerce-klaviyo'),
+            instructions: "One mapping per line, as `craftFieldHandle=klaviyoPropertyKey`. For example: `phoneNumber=phone_number`. For logged-in customers, values are read from the Craft user; for guest checkout, from the order's billing address (shipping as fallback). Anything not listed here is never sent to Klaviyo."|t('commerce-klaviyo'),
+            id: 'profileFieldMappingRaw',
+            name: 'profileFieldMappingRaw',
+            value: settings.profileFieldMappingRaw,
+            rows: 6,
+        }) }}
+
+        {{ forms.checkboxField({
+            label: "Enable public track/identify actions"|t('commerce-klaviyo'),
+            instructions: "Off by default. When on, Twig forms may POST to `commerce-klaviyo/api/identify` and `commerce-klaviyo/api/track` (custom events, list subscribe, optional order tracking). Anonymous profile updates by email can be abused — only enable if your storefront templates actually post to these actions."|t('commerce-klaviyo'),
+            id: 'publicTrackActionsEnabled',
+            name: 'publicTrackActionsEnabled',
+            checked: settings.publicTrackActionsEnabled,
+        }) }}
+    </div>
+
+    <div class="tab-panel hidden" id="tab-panel-newsletterSignup" data-tab-panel="newsletterSignup">
+        {{ forms.checkboxField({
+            label: "Enable newsletter signup"|t('commerce-klaviyo'),
+            instructions: "Off by default. Turn on to let customers subscribe to a Klaviyo list, either through this plugin's own built-in form action or a bound Formie form."|t('commerce-klaviyo'),
+            id: 'newsletterSignupEnabled',
+            name: 'newsletterSignupEnabled',
+            checked: settings.newsletterSignupEnabled,
+            toggle: 'newsletter-signup-settings',
+        }) }}
+
+        <div id="newsletter-signup-settings" class="{{ not settings.newsletterSignupEnabled ? 'hidden' }}">
+            <div class="field" id="commerce-klaviyo-lists-field">
+                <div class="heading">
+                    <label for="newsletterListId">{{ "Klaviyo list"|t('commerce-klaviyo') }}</label>
+                </div>
+                <div class="input ltr">
+                    <div class="flex">
+                        <select id="newsletterListId" name="newsletterListId" class="flex-grow">
+                            {% if settings.newsletterListId %}
+                                <option value="{{ settings.newsletterListId }}" selected>{{ settings.newsletterListId }}</option>
+                            {% else %}
+                                <option value="">{{ "Select a list…"|t('commerce-klaviyo') }}</option>
+                            {% endif %}
+                        </select>
+                        <button type="button" class="btn" id="commerce-klaviyo-lists-refresh">{{ "Refresh lists"|t('commerce-klaviyo') }}</button>
+                    </div>
+                </div>
+                <div class="instructions">
+                    <p>{{ "Lists are fetched from your Klaviyo account using the configured API key."|t('commerce-klaviyo') }}</p>
+                    {% if selectedListOptInProcess %}
+                        <p>{{ "Selected list opt-in process: {process}"|t('commerce-klaviyo', { process: selectedListOptInProcess }) }}</p>
+                    {% endif %}
+                </div>
+                <span id="commerce-klaviyo-lists-result" class="hidden"></span>
+            </div>
+
+            {% js %}
+            (function () {
+                const select = document.getElementById({{ 'newsletterListId'|namespaceInputId|json_encode|raw }});
+                const refreshBtn = document.getElementById({{ 'commerce-klaviyo-lists-refresh'|namespaceInputId|json_encode|raw }});
+                const result = document.getElementById({{ 'commerce-klaviyo-lists-result'|namespaceInputId|json_encode|raw }});
+                if (!select || !refreshBtn) return;
+
+                const selectedId = {{ settings.newsletterListId|json_encode|raw }};
+
+                async function loadLists() {
+                    refreshBtn.setAttribute('disabled', 'disabled');
+                    result.classList.add('hidden');
+
+                    const body = new FormData();
+                    body.append(Craft.csrfTokenName, Craft.csrfTokenValue);
+
+                    try {
+                        const response = await fetch('{{ actionUrl('commerce-klaviyo/cp/lists/index') }}', {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json' },
+                            body,
+                        });
+                        const data = await response.json();
+
+                        if (!data.success) {
+                            result.textContent = data.message || 'Could not load lists.';
+                            result.className = 'error';
+                            return;
+                        }
+
+                        const current = select.value;
+                        select.innerHTML = '';
+
+                        const placeholder = document.createElement('option');
+                        placeholder.value = '';
+                        placeholder.textContent = '{{ "Select a list…"|t('commerce-klaviyo')|e('js') }}';
+                        select.appendChild(placeholder);
+
+                        for (const list of data.lists || []) {
+                            const option = document.createElement('option');
+                            option.value = list.id;
+                            const optIn = list.optInProcess ? ` (${list.optInProcess.replace(/_/g, ' ')})` : '';
+                            option.textContent = `${list.name}${optIn}`;
+                            if (list.id === selectedId || list.id === current) {
+                                option.selected = true;
+                            }
+                            select.appendChild(option);
+                        }
+
+                        result.textContent = '{{ "Lists loaded."|t('commerce-klaviyo') }}';
+                        result.className = 'success';
+                    } catch (error) {
+                        result.textContent = String(error);
+                        result.className = 'error';
+                    } finally {
+                        refreshBtn.removeAttribute('disabled');
+                    }
+                }
+
+                refreshBtn.addEventListener('click', loadLists);
+
+                if ({{ settings.newsletterSignupEnabled ? 'true' : 'false' }}) {
+                    loadLists();
+                }
+            })();
+            {% endjs %}
+
+            {% if formieForms is defined and formieForms|length %}
+                {{ forms.selectField({
+                    label: "Formie form"|t('commerce-klaviyo'),
+                    instructions: "Optional. Bind an existing Formie form as the newsletter signup form — its successful submissions are subscribed using this plugin's own Klaviyo API key, no need to set up Formie's own separate Klaviyo integration. Leave unset to only use this plugin's own built-in form action instead."|t('commerce-klaviyo'),
+                    id: 'newsletterFormieFormId',
+                    name: 'newsletterFormieFormId',
+                    value: settings.newsletterFormieFormId,
+                    options: [{ label: "Don't use a Formie form"|t('commerce-klaviyo'), value: '' }]|merge(formieForms|map(form => { label: form.title, value: form.id })),
+                }) }}
+
+                {{ forms.textField({
+                    label: "Formie email field handle"|t('commerce-klaviyo'),
+                    instructions: "The handle of the field on the bound Formie form that holds the subscriber's email address."|t('commerce-klaviyo'),
+                    id: 'newsletterFormieEmailFieldHandle',
+                    name: 'newsletterFormieEmailFieldHandle',
+                    value: settings.newsletterFormieEmailFieldHandle,
+                    placeholder: 'email',
+                }) }}
+
+                {{ forms.textField({
+                    label: "Formie first name field handle"|t('commerce-klaviyo'),
+                    instructions: "Optional."|t('commerce-klaviyo'),
+                    id: 'newsletterFormieFirstNameFieldHandle',
+                    name: 'newsletterFormieFirstNameFieldHandle',
+                    value: settings.newsletterFormieFirstNameFieldHandle,
+                }) }}
+
+                {{ forms.textField({
+                    label: "Formie last name field handle"|t('commerce-klaviyo'),
+                    instructions: "Optional."|t('commerce-klaviyo'),
+                    id: 'newsletterFormieLastNameFieldHandle',
+                    name: 'newsletterFormieLastNameFieldHandle',
+                    value: settings.newsletterFormieLastNameFieldHandle,
+                }) }}
+            {% else %}
+                <p class="light">{{ "Install and enable Formie to bind one of its forms as the newsletter signup form. Without it, this plugin's own built-in form action (`commerce-klaviyo/newsletter/subscribe`) is the only signup path."|t('commerce-klaviyo') }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="tab-panel hidden" id="tab-panel-backInStock" data-tab-panel="backInStock">
+        <p class="light">{{ "Back-in-stock notifications use this plugin's catalog inventory sync plus a public form action. Customers POST an email and variant ID; Klaviyo's own back-in-stock flow sends the message when inventory moves from zero to in stock. Email channel only — SMS/push consent is out of scope."|t('commerce-klaviyo') }}</p>
+
+        {{ forms.textField({
+            label: "Inventory reporting threshold"|t('commerce-klaviyo'),
+            instructions: "Optional. When set to a positive number N, tracked variants only send their real stock to Klaviyo once quantity is at or below N. Above N, Klaviyo receives a high placeholder quantity instead — so low-inventory and back-in-stock logic ignore high-stock noise. Leave empty to always send the real stock. Untracked variants are unaffected (they always report as plentifully in stock)."|t('commerce-klaviyo'),
+            id: 'inventoryReportingThreshold',
+            name: 'inventoryReportingThreshold',
+            value: settings.inventoryReportingThreshold,
+            type: 'number',
+            min: 0,
+            placeholder: "e.g. 10"|t('commerce-klaviyo'),
+        }) }}
+
+        {{ forms.checkboxField({
+            label: "Also subscribe to a Klaviyo list"|t('commerce-klaviyo'),
+            instructions: "When enabled, a successful back-in-stock signup also queues a Klaviyo list subscription (same API as newsletter signup). Useful for growing a marketing list from sold-out product pages. The back-in-stock Klaviyo flow still handles the actual restock email."|t('commerce-klaviyo'),
+            id: 'backInStockSubscribeToListEnabled',
+            name: 'backInStockSubscribeToListEnabled',
+            checked: settings.backInStockSubscribeToListEnabled,
+            toggle: 'back-in-stock-list-settings',
+        }) }}
+
+        <div id="back-in-stock-list-settings" class="{{ not settings.backInStockSubscribeToListEnabled ? 'hidden' }}">
+            <div class="field" id="commerce-klaviyo-bis-lists-field">
+                <div class="heading">
+                    <label for="backInStockListId">{{ "Klaviyo list for back-in-stock signups"|t('commerce-klaviyo') }}</label>
+                </div>
+                <div class="input ltr">
+                    <div class="flex">
+                        <select id="backInStockListId" name="backInStockListId" class="flex-grow">
+                            {% if settings.backInStockListId %}
+                                <option value="{{ settings.backInStockListId }}" selected>{{ settings.backInStockListId }}</option>
+                            {% else %}
+                                <option value="">{{ "Select a list…"|t('commerce-klaviyo') }}</option>
+                            {% endif %}
+                        </select>
+                        <button type="button" class="btn" id="commerce-klaviyo-bis-lists-refresh">{{ "Refresh lists"|t('commerce-klaviyo') }}</button>
+                    </div>
+                </div>
+                <div class="instructions">
+                    <p>{{ "Lists are fetched from your Klaviyo account using the configured API key."|t('commerce-klaviyo') }}</p>
+                    {% if selectedBackInStockListOptInProcess %}
+                        <p>{{ "Selected list opt-in process: {process}"|t('commerce-klaviyo', { process: selectedBackInStockListOptInProcess }) }}</p>
+                    {% endif %}
+                </div>
+                <span id="commerce-klaviyo-bis-lists-result" class="hidden"></span>
+            </div>
+
+            {% js %}
+            (function () {
+                const select = document.getElementById({{ 'backInStockListId'|namespaceInputId|json_encode|raw }});
+                const refreshBtn = document.getElementById({{ 'commerce-klaviyo-bis-lists-refresh'|namespaceInputId|json_encode|raw }});
+                const result = document.getElementById({{ 'commerce-klaviyo-bis-lists-result'|namespaceInputId|json_encode|raw }});
+                if (!select || !refreshBtn) return;
+
+                const selectedId = {{ settings.backInStockListId|json_encode|raw }};
+
+                async function loadLists() {
+                    refreshBtn.setAttribute('disabled', 'disabled');
+                    result.classList.add('hidden');
+
+                    const body = new FormData();
+                    body.append(Craft.csrfTokenName, Craft.csrfTokenValue);
+
+                    try {
+                        const response = await fetch('{{ actionUrl('commerce-klaviyo/cp/lists/index') }}', {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json' },
+                            body,
+                        });
+                        const data = await response.json();
+
+                        if (!data.success) {
+                            result.textContent = data.message || 'Could not load lists.';
+                            result.className = 'error';
+                            result.classList.remove('hidden');
+                            return;
+                        }
+
+                        const current = select.value;
+                        select.innerHTML = '';
+
+                        const placeholder = document.createElement('option');
+                        placeholder.value = '';
+                        placeholder.textContent = '{{ "Select a list…"|t('commerce-klaviyo')|e('js') }}';
+                        select.appendChild(placeholder);
+
+                        for (const list of data.lists || []) {
+                            const option = document.createElement('option');
+                            option.value = list.id;
+                            const optIn = list.optInProcess ? ` (${list.optInProcess.replace(/_/g, ' ')})` : '';
+                            option.textContent = `${list.name}${optIn}`;
+                            if (list.id === selectedId || list.id === current) {
+                                option.selected = true;
+                            }
+                            select.appendChild(option);
+                        }
+
+                        result.textContent = '{{ "Lists refreshed."|t('commerce-klaviyo')|e('js') }}';
+                        result.className = 'success';
+                        result.classList.remove('hidden');
+                    } catch (error) {
+                        result.textContent = '{{ "Could not load lists."|t('commerce-klaviyo')|e('js') }}';
+                        result.className = 'error';
+                        result.classList.remove('hidden');
+                    } finally {
+                        refreshBtn.removeAttribute('disabled');
+                    }
+                }
+
+                refreshBtn.addEventListener('click', loadLists);
+            })();
+            {% endjs %}
+        </div>
+
+        <div class="field">
+            <div class="heading">
+                <label>{{ "Product-page form snippet"|t('commerce-klaviyo') }}</label>
+            </div>
+            <div class="instructions">
+                <p>{{ "Paste this into a Commerce product template (or adapt the variable names). The form only renders when the selected variant tracks inventory and is out of stock. There is no automatic storefront injection — themes own the markup."|t('commerce-klaviyo') }}</p>
+            </div>
+            <div class="input">
+                {% set backInStockSnippetText %}
+{# Paste on a product template. Assumes `product` and optionally `variant`. #}
+{% verbatim %}{% set bisVariant = variant ?? product.defaultVariant %}
+{% if bisVariant and bisVariant.inventoryTracked and bisVariant.stock <= 0 %}
+  <form method="post" accept-charset="UTF-8">
+    {{ csrfInput() }}
+    {{ actionInput('commerce-klaviyo/subscriptions/back-in-stock') }}
+    {{ hiddenInput('variantId', bisVariant.id) }}
+    <label>
+      Email
+      <input type="email" name="email" required autocomplete="email">
+    </label>
+    <button type="submit">Notify me when back in stock</button>
+  </form>
+{% endif %}{% endverbatim %}
+{% endset %}
+                <textarea id="commerce-klaviyo-bis-snippet" class="text fullwidth code" rows="16" readonly>{{ backInStockSnippetText|trim }}</textarea>
+                <div class="flex" style="margin-top: 0.5rem; gap: 0.5rem; align-items: center;">
+                    <button type="button" class="btn" id="commerce-klaviyo-bis-copy">{{ "Copy snippet"|t('commerce-klaviyo') }}</button>
+                    <span id="commerce-klaviyo-bis-copy-status" class="light hidden"></span>
+                </div>
+                <p class="light" style="margin-top: 0.75rem;">{{ "Action: `{action}` — requires a Klaviyo back-in-stock flow and catalog variants synced with matching Craft variant IDs."|t('commerce-klaviyo', { action: backInStockAction }) }}</p>
+            </div>
+        </div>
+
+        {% js %}
+        (function () {
+            const btn = document.getElementById({{ 'commerce-klaviyo-bis-copy'|namespaceInputId|json_encode|raw }});
+            const field = document.getElementById({{ 'commerce-klaviyo-bis-snippet'|namespaceInputId|json_encode|raw }});
+            const status = document.getElementById({{ 'commerce-klaviyo-bis-copy-status'|namespaceInputId|json_encode|raw }});
+            if (!btn || !field || !status) return;
+
+            btn.addEventListener('click', async () => {
+                status.classList.add('hidden');
+                try {
+                    await navigator.clipboard.writeText(field.value);
+                    status.textContent = {{ "Copied."|t('commerce-klaviyo')|json_encode|raw }};
+                    status.classList.remove('hidden');
+                } catch (error) {
+                    field.focus();
+                    field.select();
+                    status.textContent = {{ "Select the snippet and copy manually (Ctrl/Cmd+C)."|t('commerce-klaviyo')|json_encode|raw }};
+                    status.classList.remove('hidden');
+                }
+            });
+        })();
+        {% endjs %}
+    </div>
+
+    <div class="tab-panel hidden" id="tab-panel-webhooks" data-tab-panel="webhooks">
+        {{ forms.checkboxField({
+            label: "Enable Klaviyo consent webhooks"|t('commerce-klaviyo'),
+            instructions: "When enabled, signed Klaviyo system-webhook POSTs update a local user field when someone unsubscribes or re-subscribes in Klaviyo."|t('commerce-klaviyo'),
+            id: 'webhookEnabled',
+            name: 'webhookEnabled',
+            checked: settings.webhookEnabled,
+            toggle: 'webhook-settings',
+        }) }}
+
+        <div id="webhook-settings" class="{{ not settings.webhookEnabled ? 'hidden' }}">
+            <p class="light">{{ "Webhook URL: {url}"|t('commerce-klaviyo', { url: webhookUrl }) }}</p>
+            <p class="light">{{ "Subscribe to Klaviyo topics such as `event:klaviyo.unsubscribed_from_email_marketing` and `event:klaviyo.subscribed_to_email_marketing`."|t('commerce-klaviyo') }}</p>
+
+            {{ forms.autosuggestField({
+                label: "Webhook signing secret"|t('commerce-klaviyo'),
+                instructions: "The secret Klaviyo uses to sign webhook requests. Accepts an environment variable reference (e.g. $KLAVIYO_WEBHOOK_SECRET)." |t('commerce-klaviyo'),
+                id: 'webhookSecret',
+                name: 'webhookSecret',
+                value: settings.webhookSecret,
+                suggestEnvVars: true,
+            }) }}
+
+            {{ forms.textField({
+                label: "Opt-out user field handle"|t('commerce-klaviyo'),
+                instructions: "Handle of a Lightswitch user field set to on when the profile opts out in Klaviyo, and off when they re-subscribe."|t('commerce-klaviyo'),
+                id: 'optOutFieldHandle',
+                name: 'optOutFieldHandle',
+                value: settings.optOutFieldHandle,
+            }) }}
+        </div>
+    </div>
+
+    <div class="tab-panel hidden" id="tab-panel-onsiteTracking" data-tab-panel="onsiteTracking">
+        {{ forms.checkboxField({
+            label: "Enable onsite tracking"|t('commerce-klaviyo'),
+            instructions: "Off by default. Loads Klaviyo's public JavaScript snippet on the storefront and tracks Viewed Product on product templates plus Added to Cart when Commerce updates the cart. Uses the same variant IDs as catalog sync and order events. Headless front ends should leave this off and track in their own JavaScript instead."|t('commerce-klaviyo'),
+            id: 'onsiteTrackingEnabled',
+            name: 'onsiteTrackingEnabled',
+            checked: settings.onsiteTrackingEnabled,
+            toggle: 'onsite-tracking-settings',
+        }) }}
+
+        <div id="onsite-tracking-settings" class="{{ not settings.onsiteTrackingEnabled ? 'hidden' }}">
+            {{ forms.autosuggestField({
+                label: "Klaviyo public API key"|t('commerce-klaviyo'),
+                instructions: "Your Klaviyo account's six-character public API key (Settings → API Keys). This is safe to expose in the browser — never paste the private API key here. Accepts an environment variable reference (e.g. $KLAVIYO_PUBLIC_API_KEY)." |t('commerce-klaviyo'),
+                id: 'publicApiKey',
+                name: 'publicApiKey',
+                value: settings.publicApiKey,
+                suggestEnvVars: true,
+            }) }}
+
+            <p class="light">{{ "Viewed Product fires when a template exposes a `product` variable (standard Commerce product detail pages). Added to Cart fires on AJAX cart updates and after non-AJAX add-to-cart form submissions."|t('commerce-klaviyo') }}</p>
+        </div>
+    </div>
+
+    {% js %}
+    (function () {
+        const root = document.getElementById({{ 'commerce-klaviyo-settings'|namespaceInputId|json_encode|raw }});
+        if (!root) return;
+
+        const tabs = Array.from(root.querySelectorAll(':scope > .pane-tabs [data-tab-id]'));
+        const panels = Array.from(root.querySelectorAll(':scope > [data-tab-panel]'));
+
+        function select(tabId) {
+            if (!panels.some((panel) => panel.dataset.tabPanel === tabId)) return;
+
+            tabs.forEach((tab) => {
+                const selected = tab.dataset.tabId === tabId;
+                tab.classList.toggle('sel', selected);
+                tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+            });
+            panels.forEach((panel) => {
+                panel.classList.toggle('hidden', panel.dataset.tabPanel !== tabId);
+            });
+        }
+
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', (event) => {
+                event.preventDefault();
+                select(tab.dataset.tabId);
+                history.replaceState(null, '', '#' + tab.dataset.tabId);
+            });
+        });
+
+        // Deep link (e.g. a bookmark to #catalogSync) wins; otherwise land on
+        // whichever tab is currently flagging an error, so a sync failure is
+        // never silently sitting behind an unselected tab.
+        const errorTab = tabs.find((tab) => tab.classList.contains('error'));
+        const initial = (location.hash || '').slice(1) || errorTab?.dataset.tabId || tabs[0]?.dataset.tabId;
+
+        if (initial) select(initial);
+    })();
+    {% endjs %}
+</div>

@@ -1,0 +1,30 @@
+{% import "_includes/forms" as forms %}
+
+{% if not configured %}
+    <p class="warning">{{ "Configure a Klaviyo private API key in the plugin settings before syncing historical orders."|t('commerce-klaviyo') }}</p>
+{% else %}
+    <form method="post" accept-charset="UTF-8">
+        {{ csrfInput() }}
+        {{ actionInput('commerce-klaviyo/cp/historical-orders/sync') }}
+
+        {{ forms.dateField({
+            label: "From"|t('commerce-klaviyo'),
+            id: 'from',
+            name: 'from',
+            required: true,
+        }) }}
+
+        {{ forms.dateField({
+            label: "To"|t('commerce-klaviyo'),
+            id: 'to',
+            name: 'to',
+            required: true,
+        }) }}
+
+        <p class="light">{{ "Queues Placed Order and Ordered Product events for completed Commerce orders in this dateOrdered range, stamped with each order’s original date. Run the queue afterwards."|t('commerce-klaviyo') }}</p>
+
+        <div class="buttons">
+            <button type="submit" class="btn submit">{{ "Queue historical sync"|t('commerce-klaviyo') }}</button>
+        </div>
+    </form>
+{% endif %}

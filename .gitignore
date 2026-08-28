@@ -1,0 +1,9 @@
+/vendor/
+/composer.lock
+/tests/_output/*
+!/tests/_output/.gitkeep
+/.phpstan-cache/
+/.rector-cache/
+/.phpunit.result.cache
+.env
+.DS_Store

@@ -1,0 +1,97 @@
+{
+    "name": "kernpfad/craft-commerce-klaviyo",
+    "description": "A Klaviyo integration for Craft Commerce: real-time product catalog sync (with back-in-stock support), standard ecommerce event tracking that matches Klaviyo's own metric names, and custom profile field mapping — every API call is queued and isolated so a Klaviyo outage never blocks checkout.",
+    "type": "craft-plugin",
+    "keywords": [
+        "craft",
+        "cms",
+        "craftcms",
+        "craft-plugin",
+        "commerce",
+        "klaviyo",
+        "email-marketing",
+        "tracking"
+    ],
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Kernpfad",
+            "homepage": "https://kernpfad.dev"
+        }
+    ],
+    "support": {
+        "email": "rene.neuburger@gmx.de",
+        "docs": "https://github.com/kernpfad/craft-commerce-klaviyo",
+        "issues": "https://github.com/kernpfad/craft-commerce-klaviyo/issues",
+        "source": "https://github.com/kernpfad/craft-commerce-klaviyo",
+        "security": "https://github.com/kernpfad/craft-commerce-klaviyo/blob/main/SECURITY.md"
+    },
+    "require": {
+        "php": "^8.2",
+        "craftcms/cms": "^5.0.0",
+        "craftcms/commerce": "^5.0.0"
+    },
+    "require-dev": {
+        "craftcms/ecs": "dev-main",
+        "craftcms/rector": "dev-craft6",
+        "phpstan/phpstan": "^2.2",
+        "phpunit/phpunit": "^11.0",
+        "vlucas/phpdotenv": "^5.6",
+        "verbb/formie": "^3.0",
+        "phpstan/phpstan-phpunit": "^2.0"
+    },
+    "suggest": {
+        "verbb/formie": "Lets you bind an existing Formie form as the newsletter signup form, instead of (or alongside) this plugin's own built-in form action."
+    },
+    "autoload": {
+        "psr-4": {
+            "kernpfad\\commerceklaviyo\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "kernpfad\\commerceklaviyo\\tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "handle": "commerce-klaviyo",
+        "name": "Commerce Klaviyo",
+        "developer": "Kernpfad",
+        "documentationUrl": "https://github.com/kernpfad/craft-commerce-klaviyo",
+        "class": "kernpfad\\commerceklaviyo\\CommerceKlaviyo",
+        "changelogUrl": "https://raw.githubusercontent.com/kernpfad/craft-commerce-klaviyo/main/CHANGELOG.md",
+        "developerUrl": "https://kernpfad.dev",
+        "imprintUrl": "https://kernpfad.dev/en/legal-notice",
+        "privacyPolicyUrl": "https://kernpfad.dev/en/privacy-policy",
+        "termsUrl": "https://kernpfad.dev/en/terms-and-conditions"
+    },
+    "config": {
+        "allow-plugins": {
+            "craftcms/plugin-installer": true,
+            "yiisoft/yii2-composer": true
+        },
+        "preferred-install": "source",
+        "sort-packages": true
+    },
+    "scripts": {
+        "hooks:install": "git config core.hooksPath .githooks",
+        "post-install-cmd": "@hooks:install",
+        "post-update-cmd": "@hooks:install",
+        "check-cs": "ecs check --ansi",
+        "fix-cs": "ecs check --ansi --fix",
+        "phpstan": "phpstan analyse --memory-limit=1G --ansi",
+        "rector": "rector process --dry-run --ansi",
+        "rector:fix": "rector process --ansi",
+        "test": "phpunit --testsuite unit",
+        "test:unit": "phpunit --testsuite unit",
+        "test:integration": "phpunit --testsuite integration",
+        "check": [
+            "@check-cs",
+            "@phpstan",
+            "@rector",
+            "@test:unit"
+        ]
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
