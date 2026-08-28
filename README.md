@@ -38,6 +38,29 @@ Klaviyo flows can link back to the cart two ways:
 - **`CheckoutURL`** on `Started Checkout` / `Updated Cart` — Commerce’s load-cart URL.
 - **Restore action** (Foster-compatible pattern): `https://yoursite.test/actions/commerce-klaviyo/cart/restore?number={{ event.OrderId }}` — redirects to the same load-cart URL for incomplete carts; completed or missing carts return 404.
 
+## Public track / identify actions
+
+Off by default (`publicTrackActionsEnabled`). When enabled, Twig forms can POST to:
+
+- `commerce-klaviyo/api/identify` — upsert a Klaviyo profile (queued)
+- `commerce-klaviyo/api/track` — identify + optional custom event + optional list subscribe (all queued)
+
+Example:
+
+```twig
+<form method="post">
+  {{ csrfInput() }}
+  {{ actionInput('commerce-klaviyo/api/track') }}
+  <input type="hidden" name="list" value="LIST_ID">
+  <input type="email" name="email" required>
+  <input type="hidden" name="event[name]" value="Completed Survey">
+  <input type="hidden" name="event[unique_id]" value="survey-{{ now|date('U') }}">
+  <button type="submit">Send</button>
+</form>
+```
+
+List IDs always use Klaviyo’s subscribe (double opt-in aware) endpoint. Optional `forward` redirects after success. See Foster Klaviyo Connect docs for the shared form parameter shapes (`profile[]`, `event[]`, `lists[]`, `event[trackOrder]`).
+
 ## Catalog sync
 
 - Saving a product pushes it as a catalog item; saving a variant pushes it as a catalog variant with title, price, SKU, URL, inventory quantity, and images (`image_full_url`, `image_thumbnail_url`, `images[]` from the configured Assets field — variant first, then product).

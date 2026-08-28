@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added optional **public track/identify actions** (`publicTrackActionsEnabled`, off by default): `commerce-klaviyo/api/identify` and `commerce-klaviyo/api/track` queue profile upserts, custom events, DOI-aware list subscribe, and optional Commerce order tracking from Twig forms (Foster-compatible parameter shapes).
 - Added **`Updated Cart`** tracking for abandoned-cart flows: incomplete carts with an email fire Klaviyo’s reserved metric when line items or the order total change (address-only saves are ignored). New setting **`trackUpdatedCart`** (default on) on the Order tracking tab.
 - Added public **`commerce-klaviyo/cart/restore?number=…`** action that redirects to Commerce’s load-cart URL for incomplete carts (404 when missing or completed). `Started Checkout` / `Updated Cart` payloads include `OrderId` (cart number) alongside `CheckoutURL` for mail templates.
 

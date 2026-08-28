@@ -550,6 +550,14 @@
             value: settings.profileFieldMappingRaw,
             rows: 6,
         }) }}
+
+        {{ forms.checkboxField({
+            label: "Enable public track/identify actions"|t('commerce-klaviyo'),
+            instructions: "Off by default. When on, Twig forms may POST to `commerce-klaviyo/api/identify` and `commerce-klaviyo/api/track` (custom events, list subscribe, optional order tracking). Anonymous profile updates by email can be abused — only enable if your templates need Foster-style form actions."|t('commerce-klaviyo'),
+            id: 'publicTrackActionsEnabled',
+            name: 'publicTrackActionsEnabled',
+            checked: settings.publicTrackActionsEnabled,
+        }) }}
     </div>
 
     <div class="tab-panel hidden" id="tab-panel-newsletterSignup" data-tab-panel="newsletterSignup">
