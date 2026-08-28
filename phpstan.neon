@@ -1,0 +1,31 @@
+includes:
+    - vendor/phpstan/phpstan-phpunit/extension.neon
+
+parameters:
+    level: 8
+    paths:
+        - src
+        - tests/unit
+    tmpDir: .phpstan-cache
+    scanFiles:
+        - vendor/craftcms/cms/src/Craft.php
+        - vendor/yiisoft/yii2/Yii.php
+        - vendor/twig/twig/src/Extension/CoreExtension.php
+    stubFiles:
+        - phpstan/stubs/BaseYii.stub
+        - phpstan/stubs/console/Application.stub
+        - phpstan/stubs/web/Application.stub
+    earlyTerminatingMethodCalls:
+        Craft:
+            - dd
+        yii\base\Application:
+            - end
+        yii\base\ErrorHandler:
+            - convertExceptionToError
+    ignoreErrors:
+        -
+            identifier: parameterByRef.type
+            paths:
+                - tests/unit/KlaviyoClientTest.php
+                - tests/unit/CategorySyncServiceTest.php
+                - tests/unit/BulkCatalogSyncServiceTest.php

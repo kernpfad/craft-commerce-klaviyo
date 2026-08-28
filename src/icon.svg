@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Klaviyo">
+  <rect x="1" y="1" width="98" height="98" rx="18" fill="oklch(20% 0.014 255)" stroke="oklch(36% 0.012 255)" stroke-width="1.5"></rect>
+  <g transform="translate(24.8 24.8) scale(2.1)" fill="none" stroke="oklch(78% 0.19 142)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="18" cy="5" r="2.6"></circle><circle cx="6" cy="12" r="2.6"></circle><circle cx="18" cy="19" r="2.6"></circle><path d="m8.3 13.3 7.4 4.4M15.7 6.3 8.3 10.7"></path>
+  </g>
+</svg>
