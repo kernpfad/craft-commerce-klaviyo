@@ -66,9 +66,25 @@ wires up for you (`git config core.hooksPath .githooks`):
   export CRAFT_TEST_SITE_PATH=~/projects/kernpfad/craft-test-site
   ```
 
+## Branches
+
+Trunk-based: `main` is always release-ready. No long-lived `develop` branch.
+
+| Prefix | Use for |
+|---|---|
+| `feature/…` | New behaviour |
+| `fix/…` | Bug fixes |
+| `chore/…` | Tooling, docs, cleanup |
+| `release/x.y.z` | Parallel release work only when needed |
+
+Name form: `prefix/kurz-kebab-case` (e.g. `feature/list-fields`, `fix/bulk-catalog-timeout`).
+Prefer `feature/` over `feat/`. Temporary Cloud Agent branches may use `cursor/…`; rename before opening the PR when practical.
+
+Open a PR into `main`. Squash-merge is the only enabled merge method; GitHub deletes the head branch after merge.
+
 ## Pull requests
 
-Use the PR template. Update `CHANGELOG.md` when behaviour changes.
+Use the PR template. Update `CHANGELOG.md` when behaviour changes. Keep `composer check` green; CI runs Quality on PHP 8.2–8.4.
 
 ## Security
 
