@@ -2,14 +2,13 @@
 
 ## Unreleased
 
+## 1.0.0 - 2026-08-28
+
 - Added **historical order sync**: `php craft commerce-klaviyo/sync-orders --from=YYYY-MM-DD --to=YYYY-MM-DD` and a Utilities → **Klaviyo historical orders** screen. Queues Placed Order / Ordered Product for completed orders in the `dateOrdered` range, stamped with the original order time.
 - Added **Klaviyo List** and **Klaviyo Lists** field types for entries/users so Twig forms can read `entry.myList.id` / loop `entry.myLists` when posting to track/subscribe actions.
 - Added optional **public track/identify actions** (`publicTrackActionsEnabled`, off by default): `commerce-klaviyo/api/identify` and `commerce-klaviyo/api/track` queue profile upserts, custom events, DOI-aware list subscribe, and optional Commerce order tracking from Twig forms.
 - Added **`Updated Cart`** tracking for abandoned-cart flows: incomplete carts with an email fire Klaviyo’s reserved metric when line items or the order total change (address-only saves are ignored). New setting **`trackUpdatedCart`** (default on) on the Order tracking tab.
 - Added public **`commerce-klaviyo/cart/restore?number=…`** action that redirects to Commerce’s load-cart URL for incomplete carts (404 when missing or completed). `Started Checkout` / `Updated Cart` payloads include `OrderId` (cart number) alongside `CheckoutURL` for mail templates.
-
-## 1.0.0 - 2026-08-28
-
 - **Fixed bulk catalog reindex sending a double-wrapped JSON:API payload that Klaviyo rejected on every job.** Each bulk entry's `payload` was already a full single-create `{data: {type, attributes}}` envelope from `CatalogPayloadBuilder`, then nested again into `items.data[]` / `variants.data[]`. Klaviyo responded with `"'type' is a required field for the resource 'request-data'"` because `type` sat one level too deep. The same wrap bug existed on the bulk update path. Once unwrapped, real reindexes still timed out: Klaviyo bulk jobs for a handful of items routinely take several minutes, past the old 180s poll budget and Craft's 300s default `ttr`. Polling is now 200 × 3s (600s) and bulk chunk jobs use a 1500s `ttr`.
 - **Package C — catalog API polish:** Klaviyo HTTP client now sends `Accept` / `Content-Type: application/vnd.api+json` (JSON:API media type); catalog item/variant payloads include `image_thumbnail_url` and the full `images` gallery from the configured Assets field; variant sync prefers a variant-level image field over the product (same fallback order as title/metadata). No automatic storefront back-in-stock form injection — themes still use the settings snippet.
 - **Package B — back-in-stock hardening:** the public back-in-stock action now rejects signups when the variant does not track inventory or is currently in stock (server-side stock guard, independent of theme markup); Klaviyo API errors are mapped to clearer customer messages (duplicate subscription, missing catalog variant, generic retry); optional **also subscribe to a Klaviyo list** setting on the Back in stock tab queues a list subscription after a successful signup (same queued API as newsletter signup).
