@@ -12,7 +12,7 @@ Please **do not** open a public GitHub issue for security problems.
 Prefer one of these private channels:
 
 1. [GitHub Security Advisories](https://github.com/kernpfad/craft-commerce-klaviyo/security/advisories/new) for this repository
-2. Email: rene.neuburger@gmx.de
+2. Email: support@kernpfad.dev
 
 Include:
 
