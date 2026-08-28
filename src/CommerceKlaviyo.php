@@ -31,6 +31,7 @@ use kernpfad\commerceklaviyo\services\NewsletterSubscriptionService;
 use kernpfad\commerceklaviyo\services\OnsiteTrackingService;
 use kernpfad\commerceklaviyo\services\OrderTrackingService;
 use kernpfad\commerceklaviyo\services\ProfileMapper;
+use kernpfad\commerceklaviyo\services\TrackActionsService;
 use verbb\formie\elements\Form as FormieForm;
 use verbb\formie\events\SubmissionEvent as FormieSubmissionEvent;
 use verbb\formie\services\Submissions as FormieSubmissions;
@@ -42,6 +43,7 @@ use yii\queue\Queue as YiiQueue;
  * @property OrderTrackingService $orderTracking
  * @property NewsletterSubscriptionService $newsletterSubscription
  * @property BackInStockSubscriptionService $backInStockSubscription
+ * @property \kernpfad\commerceklaviyo\services\TrackActionsService $trackActions
  * @method Settings getSettings()
  */
 class CommerceKlaviyo extends Plugin
@@ -94,6 +96,13 @@ class CommerceKlaviyo extends Plugin
         $this->set('newsletterSubscription', function() {
             return new NewsletterSubscriptionService(
                 listId: $this->getSettings()->newsletterListId,
+                queue: $this->getSyncQueue(),
+            );
+        });
+
+        $this->set('trackActions', function() {
+            return new TrackActionsService(
+                newsletterSubscription: $this->newsletterSubscription,
                 queue: $this->getSyncQueue(),
             );
         });

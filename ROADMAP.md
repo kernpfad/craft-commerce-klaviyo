@@ -52,6 +52,15 @@ KL-02 war bereits gelöst; KL-01/03/04 waren echte Lücken (kein Console-Command
 | KL-11 | B | Newsletter: DOI-Status / List-Picker statt manueller List ID | ✅ erledigt — CP-List-Picker mit `opt_in_process` |
 | KL-12 | A→Paket | Optionales Onsite-JS im Plugin (Viewed Product / Added to Cart) | ✅ erledigt — Toggle + Public Key, AssetBundle, Cart-AJAX + Session-Fallback |
 
+### Foster-Parität (Abandoned Cart / Forms)
+
+| ID | Item | Branch | Status |
+|---|---|---|---|
+| KL-13 | `Updated Cart` (gedämpft) + `trackUpdatedCart` + Cart Restore Action | `feature/abandoned-cart` | PR offen |
+| KL-14 | Twig identify/track/subscribe Actions | `feature/track-actions` | 🚧 in Arbeit |
+| KL-15 | Klaviyo List / Lists Field Types | `feature/list-fields` | offen (Welle 2) |
+| KL-16 | Historical order backfill | `feature/historical-orders` | offen (Welle 2) |
+
 ### Nicht tun
 
 - Browse-Events server-seitig erzwingen

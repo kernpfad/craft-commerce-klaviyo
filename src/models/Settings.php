@@ -211,6 +211,14 @@ class Settings extends Model
     public bool $onsiteTrackingEnabled = false;
 
     /**
+     * When enabled, anonymous Twig forms may POST to
+     * `commerce-klaviyo/api/identify` and `commerce-klaviyo/api/track`
+     * (Foster-style). Off by default — those endpoints accept profile
+     * updates by email and can be abused if left open on public pages.
+     */
+    public bool $publicTrackActionsEnabled = false;
+
+    /**
      * Klaviyo public API key (six-character site ID), or an env var reference
      * (e.g. "$KLAVIYO_PUBLIC_API_KEY") — see {@see getPublicApiKey()}.
      * Never the private API key.
@@ -328,6 +336,7 @@ class Settings extends Model
             [['backInStockListId'], 'required', 'when' => fn(self $model): bool => $model->backInStockSubscribeToListEnabled],
             [['backInStockListId'], 'string'],
             [['onsiteTrackingEnabled'], 'boolean'],
+            [['publicTrackActionsEnabled'], 'boolean'],
             [['publicApiKey'], 'string'],
             [['publicApiKey'], 'required', 'when' => fn(self $model): bool => $model->onsiteTrackingEnabled],
         ];
