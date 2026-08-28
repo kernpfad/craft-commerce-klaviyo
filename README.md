@@ -18,6 +18,13 @@ composer require kernpfad/craft-commerce-klaviyo
 php craft plugin/install commerce-klaviyo
 ```
 
+## Field types
+
+- **Klaviyo List** — single list dropdown; Twig: `{{ entry.myListField.id }}`, `{{ entry.myListField.name }}`
+- **Klaviyo Lists** — multi checkbox group; Twig: `{% for list in entry.myListsField %}…{% endfor %}`
+
+Lists load from your Klaviyo account (cached). Use the IDs with newsletter signup or public track actions.
+
 ## Events
 
 The plugin uses Klaviyo's own reserved metric names, so Klaviyo's pre-built flow templates work without rebuilding their triggers:
