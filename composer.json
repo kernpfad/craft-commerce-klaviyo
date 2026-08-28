@@ -1,6 +1,6 @@
 {
     "name": "kernpfad/craft-commerce-klaviyo",
-    "description": "A Klaviyo integration for Craft Commerce: real-time product catalog sync (with back-in-stock support), standard ecommerce event tracking that matches Klaviyo's own metric names, and custom profile field mapping — every API call is queued and isolated so a Klaviyo outage never blocks checkout.",
+    "description": "A Klaviyo integration for Craft Commerce: real-time product catalog sync (with back-in-stock support), standard ecommerce event tracking that matches Klaviyo's own metric names, and custom profile field mapping \u2014 every API call is queued and isolated so a Klaviyo outage never blocks checkout.",
     "type": "craft-plugin",
     "keywords": [
         "craft",
@@ -21,7 +21,7 @@
     ],
     "support": {
         "email": "rene.neuburger@gmx.de",
-        "docs": "https://github.com/kernpfad/craft-commerce-klaviyo",
+        "docs": "https://kernpfad.dev/en/craft/plugins/craft-commerce-klaviyo/docs/",
         "issues": "https://github.com/kernpfad/craft-commerce-klaviyo/issues",
         "source": "https://github.com/kernpfad/craft-commerce-klaviyo",
         "security": "https://github.com/kernpfad/craft-commerce-klaviyo/blob/main/SECURITY.md"
@@ -57,7 +57,7 @@
         "handle": "commerce-klaviyo",
         "name": "Commerce Klaviyo",
         "developer": "Kernpfad",
-        "documentationUrl": "https://github.com/kernpfad/craft-commerce-klaviyo",
+        "documentationUrl": "https://kernpfad.dev/en/craft/plugins/craft-commerce-klaviyo/docs/",
         "class": "kernpfad\\commerceklaviyo\\CommerceKlaviyo",
         "changelogUrl": "https://raw.githubusercontent.com/kernpfad/craft-commerce-klaviyo/main/CHANGELOG.md",
         "developerUrl": "https://kernpfad.dev",
