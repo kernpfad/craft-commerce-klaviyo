@@ -1,5 +1,9 @@
 # Release Notes for Commerce Klaviyo
 
+## Unreleased
+
+- Added **historical order sync**: `php craft commerce-klaviyo/sync-orders --from=YYYY-MM-DD --to=YYYY-MM-DD` and a Utilities → **Klaviyo historical orders** screen. Queues Placed Order / Ordered Product for completed orders in the `dateOrdered` range, stamped with the original order time (Craft 5–ready; Foster’s utility was disabled on C5).
+
 ## 1.0.0 - 2026-08-28
 
 - **Fixed bulk catalog reindex sending a double-wrapped JSON:API payload that Klaviyo rejected on every job.** Each bulk entry's `payload` was already a full single-create `{data: {type, attributes}}` envelope from `CatalogPayloadBuilder`, then nested again into `items.data[]` / `variants.data[]`. Klaviyo responded with `"'type' is a required field for the resource 'request-data'"` because `type` sat one level too deep. The same wrap bug existed on the bulk update path. Once unwrapped, real reindexes still timed out: Klaviyo bulk jobs for a handful of items routinely take several minutes, past the old 180s poll budget and Craft's 300s default `ttr`. Polling is now 200 × 3s (600s) and bulk chunk jobs use a 1500s `ttr`.

@@ -19,11 +19,14 @@ use craft\commerce\services\Inventory;
 use craft\commerce\services\OrderHistories;
 use craft\commerce\services\Payments;
 use craft\events\ModelEvent;
+use craft\events\RegisterComponentTypesEvent;
 use craft\events\TemplateEvent;
+use craft\services\Utilities;
 use craft\web\View;
 use kernpfad\commerceklaviyo\models\Settings;
 use kernpfad\commerceklaviyo\services\BackInStockSubscriptionService;
 use kernpfad\commerceklaviyo\services\CatalogSyncService;
+use kernpfad\commerceklaviyo\services\HistoricalOrderSyncService;
 use kernpfad\commerceklaviyo\services\KlaviyoClient;
 use kernpfad\commerceklaviyo\services\KlaviyoListsService;
 use kernpfad\commerceklaviyo\services\KlaviyoStatusService;
@@ -31,6 +34,7 @@ use kernpfad\commerceklaviyo\services\NewsletterSubscriptionService;
 use kernpfad\commerceklaviyo\services\OnsiteTrackingService;
 use kernpfad\commerceklaviyo\services\OrderTrackingService;
 use kernpfad\commerceklaviyo\services\ProfileMapper;
+use kernpfad\commerceklaviyo\utilities\HistoricalOrdersUtility;
 use verbb\formie\elements\Form as FormieForm;
 use verbb\formie\events\SubmissionEvent as FormieSubmissionEvent;
 use verbb\formie\services\Submissions as FormieSubmissions;
@@ -42,6 +46,7 @@ use yii\queue\Queue as YiiQueue;
  * @property OrderTrackingService $orderTracking
  * @property NewsletterSubscriptionService $newsletterSubscription
  * @property BackInStockSubscriptionService $backInStockSubscription
+ * @property HistoricalOrderSyncService $historicalOrderSync
  * @method Settings getSettings()
  */
 class CommerceKlaviyo extends Plugin
@@ -67,6 +72,14 @@ class CommerceKlaviyo extends Plugin
         if (Craft::$app->getRequest()->getIsConsoleRequest()) {
             $this->controllerNamespace = 'kernpfad\\commerceklaviyo\\console\\controllers';
         }
+
+        Event::on(
+            Utilities::class,
+            Utilities::EVENT_REGISTER_UTILITIES,
+            static function(RegisterComponentTypesEvent $event): void {
+                $event->types[] = HistoricalOrdersUtility::class;
+            }
+        );
 
         $this->set('catalogSync', function() {
             $settings = $this->getSettings();
@@ -94,6 +107,12 @@ class CommerceKlaviyo extends Plugin
         $this->set('newsletterSubscription', function() {
             return new NewsletterSubscriptionService(
                 listId: $this->getSettings()->newsletterListId,
+                queue: $this->getSyncQueue(),
+            );
+        });
+
+        $this->set('historicalOrderSync', function() {
+            return new HistoricalOrderSyncService(
                 queue: $this->getSyncQueue(),
             );
         });

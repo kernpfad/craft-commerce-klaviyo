@@ -18,6 +18,17 @@ composer require kernpfad/craft-commerce-klaviyo
 php craft plugin/install commerce-klaviyo
 ```
 
+## Historical order sync
+
+After install (or when connecting a new Klaviyo account), backfill completed orders:
+
+```sh
+php craft commerce-klaviyo/sync-orders --from=2024-01-01 --to=2024-12-31
+php craft queue/run
+```
+
+Or use **Utilities → Klaviyo historical orders** in the control panel. Events use each order’s original `dateOrdered` timestamp; Klaviyo dedupes by `unique_id` (order number / line id).
+
 ## Events
 
 The plugin uses Klaviyo's own reserved metric names, so Klaviyo's pre-built flow templates work without rebuilding their triggers:

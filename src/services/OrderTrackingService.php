@@ -77,7 +77,7 @@ class OrderTrackingService extends Component
         );
     }
 
-    public function trackPlacedOrder(Order $order): void
+    public function trackPlacedOrder(Order $order, ?\DateTimeInterface $occurredAt = null): void
     {
         $email = $order->getEmail();
 
@@ -86,6 +86,7 @@ class OrderTrackingService extends Component
         }
 
         $profile = $this->buildProfile($email, $order);
+        $time = $occurredAt?->format('Y-m-d\TH:i:sP');
 
         $this->queueEvent(
             KlaviyoMetric::PLACED_ORDER,
@@ -99,6 +100,7 @@ class OrderTrackingService extends Component
             (float)$order->getTotal(),
             (string)$order->number,
             $order,
+            $time,
         );
 
         foreach ($order->getLineItems() as $lineItem) {
@@ -116,8 +118,22 @@ class OrderTrackingService extends Component
                 (float)$lineItem->getSubtotal(),
                 $order->number . '-' . $lineItem->id,
                 $order,
+                $time,
             );
         }
+    }
+
+    /**
+     * Re-send Placed Order / Ordered Product for a past completed order,
+     * stamped with the order's original {@see Order::$dateOrdered}.
+     */
+    public function trackHistoricalPlacedOrder(Order $order): void
+    {
+        if (!$order->isCompleted) {
+            return;
+        }
+
+        $this->trackPlacedOrder($order, $order->dateOrdered);
     }
 
     /**
@@ -244,8 +260,9 @@ class OrderTrackingService extends Component
         ?float $value,
         string $uniqueId,
         ?Order $order = null,
+        ?string $time = null,
     ): void {
-        $payload = $this->payloadBuilder->build($metric, $profile, $properties, $value, $uniqueId);
+        $payload = $this->payloadBuilder->build($metric, $profile, $properties, $value, $uniqueId, $time);
 
         $payload = $this->payloadEvents->dispatch(
             CommerceKlaviyo::EVENT_BEFORE_BUILD_TRACK_EVENT_PAYLOAD,
