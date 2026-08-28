@@ -24,11 +24,19 @@ The plugin uses Klaviyo's own reserved metric names, so Klaviyo's pre-built flow
 
 | Metric | Fired when |
 |---|---|
-| `Started Checkout` | An incomplete cart gets an email address for the first time. Tracked once per cart. |
+| `Started Checkout` | An incomplete cart gets an email address for the first time. Tracked once per cart. Includes `CheckoutURL` and `OrderId`. |
+| `Updated Cart` | An incomplete cart with an email changes line items or total (not address-only saves). Toggle: `trackUpdatedCart` (default on). |
 | `Placed Order` | An order is completed. |
 | `Ordered Product` | Once per line item on completion. |
 | `Fulfilled Order` / `Cancelled Order` | An order reaches a status you designate in settings. Commerce statuses are store-defined, so there is no universal handle to assume. |
 | `Refunded Order` | On every refund transaction. |
+
+## Abandoned cart restore
+
+Klaviyo flows can link back to the cart two ways:
+
+- **`CheckoutURL`** on `Started Checkout` / `Updated Cart` — Commerce’s load-cart URL.
+- **Restore action** (Foster-compatible pattern): `https://yoursite.test/actions/commerce-klaviyo/cart/restore?number={{ event.OrderId }}` — redirects to the same load-cart URL for incomplete carts; completed or missing carts return 404.
 
 ## Public track / identify actions
 
@@ -88,6 +96,7 @@ Under **Settings → Plugins → Commerce Klaviyo**:
 | `queueComponentId` | `queue` | Yii application component the sync jobs run on. Set this to a dedicated [yii2-queue](https://www.yiiframework.com/extension/yiisoft/yii2-queue) component to isolate Klaviyo traffic from the rest of the site's jobs. Falls back to the default queue, logged rather than thrown, if unavailable. |
 | `fulfilledStatusHandles` | none | Which of your order statuses mean "fulfilled". |
 | `cancelledStatusHandles` | none | Which mean "cancelled". |
+| `trackUpdatedCart` | `true` | Send Klaviyo `Updated Cart` when cart contents/total change (incomplete cart + email). |
 | `descriptionFieldHandle` | `null` | Custom field handle for the Klaviyo catalog description. Falls back to the product title. |
 | `imageFieldHandle` | `null` | Assets field for catalog images (variant first, then product). Sets `image_full_url`, `image_thumbnail_url`, and `images[]`. Omitted when empty. |
 | `categoriesFieldHandle` | `null` | Categories field whose selected categories sync as Klaviyo catalog categories. |
