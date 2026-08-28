@@ -54,6 +54,13 @@ class Settings extends Model
     public array $cancelledStatusHandles = [];
 
     /**
+     * When enabled (default), incomplete carts with an email fire Klaviyo's
+     * `Updated Cart` metric when line items or the order total change —
+     * not on every cart save (address-only updates are ignored).
+     */
+    public bool $trackUpdatedCart = true;
+
+    /**
      * Handle of a custom field on products (checked on the variant first,
      * product as fallback) whose value becomes the Klaviyo catalog `title`.
      * When empty, the product's (or variant's) own native title is used —
@@ -211,6 +218,14 @@ class Settings extends Model
     public bool $onsiteTrackingEnabled = false;
 
     /**
+     * When enabled, anonymous Twig forms may POST to
+     * `commerce-klaviyo/api/identify` and `commerce-klaviyo/api/track`
+     * (Foster-style). Off by default — those endpoints accept profile
+     * updates by email and can be abused if left open on public pages.
+     */
+    public bool $publicTrackActionsEnabled = false;
+
+    /**
      * Klaviyo public API key (six-character site ID), or an env var reference
      * (e.g. "$KLAVIYO_PUBLIC_API_KEY") — see {@see getPublicApiKey()}.
      * Never the private API key.
@@ -311,6 +326,7 @@ class Settings extends Model
             [['queueComponentId'], 'required'],
             [['queueComponentId'], 'string'],
             [['fulfilledStatusHandles', 'cancelledStatusHandles'], 'safe'],
+            [['trackUpdatedCart'], 'boolean'],
             [['titleFieldHandle', 'descriptionFieldHandle', 'imageFieldHandle', 'categoriesFieldHandle'], 'string'],
             [['profileFieldMappingRaw'], 'string'],
             [['catalogFieldMappingTable'], 'safe'],
@@ -328,6 +344,7 @@ class Settings extends Model
             [['backInStockListId'], 'required', 'when' => fn(self $model): bool => $model->backInStockSubscribeToListEnabled],
             [['backInStockListId'], 'string'],
             [['onsiteTrackingEnabled'], 'boolean'],
+            [['publicTrackActionsEnabled'], 'boolean'],
             [['publicApiKey'], 'string'],
             [['publicApiKey'], 'required', 'when' => fn(self $model): bool => $model->onsiteTrackingEnabled],
         ];

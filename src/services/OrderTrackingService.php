@@ -2,6 +2,7 @@
 
 namespace kernpfad\commerceklaviyo\services;
 
+use Craft;
 use craft\commerce\elements\Order;
 use craft\commerce\models\LineItem;
 use craft\commerce\models\Transaction;
@@ -12,6 +13,7 @@ use kernpfad\commerceklaviyo\jobs\TrackEventJob;
 use kernpfad\commerceklaviyo\models\KlaviyoMetric;
 use kernpfad\commerceklaviyo\records\TrackedEventRecord;
 use yii\base\Component;
+use yii\caching\CacheInterface;
 use yii\queue\Queue as YiiQueue;
 
 /**
@@ -40,6 +42,7 @@ class OrderTrackingService extends Component
         private readonly PayloadEventDispatcher $payloadEvents = new PayloadEventDispatcher(),
         private readonly array $profileFieldMapping = [],
         private readonly ?YiiQueue $queue = null,
+        private readonly ?CacheInterface $fingerprintCache = null,
         $config = [],
     ) {
         parent::__construct($config);
@@ -70,11 +73,86 @@ class OrderTrackingService extends Component
                 'ItemNames' => array_map(fn(LineItem $li): string => $li->getDescription(), $order->getLineItems()),
                 '$value' => (float)$order->getTotal(),
                 'CheckoutURL' => $this->resolveCheckoutUrl($order),
+                'OrderId' => (string)$order->number,
             ],
             (float)$order->getTotal(),
             (string)$order->number,
             $order,
         );
+    }
+
+    /**
+     * Fires Klaviyo's `Updated Cart` when an incomplete cart with an email
+     * changes its line items or total. Address-only / metadata saves that
+     * leave the fingerprint unchanged are ignored. Deduped via cache key
+     * per order ID so queue retries of the same content do not re-spam.
+     */
+    public function trackUpdatedCart(Order $order): void
+    {
+        if ($order->isCompleted || $order->id === null) {
+            return;
+        }
+
+        $email = $order->getEmail();
+        if ($email === null || $email === '') {
+            return;
+        }
+
+        $fingerprint = $this->buildCartFingerprint($order);
+        $cache = $this->resolveFingerprintCache();
+        $cacheKey = $this->updatedCartCacheKey($order->id);
+        $previous = $cache->get($cacheKey);
+        $previousFingerprint = is_string($previous) ? $previous : null;
+
+        if (!$this->hasCartContentChanged($order, $previousFingerprint)) {
+            return;
+        }
+
+        $cache->set($cacheKey, $fingerprint);
+
+        $this->queueEvent(
+            KlaviyoMetric::UPDATED_CART,
+            $this->buildProfile($email, $order),
+            [
+                'ItemNames' => array_map(fn(LineItem $li): string => $li->getDescription(), $order->getLineItems()),
+                '$value' => (float)$order->getTotal(),
+                'CheckoutURL' => $this->resolveCheckoutUrl($order),
+                'OrderId' => (string)$order->number,
+            ],
+            (float)$order->getTotal(),
+            (string)$order->number . '-updated-' . substr($fingerprint, 0, 12),
+            $order,
+        );
+    }
+
+    /**
+     * Stable hash of line items (purchasable, qty, line id) + order total.
+     * Used to suppress `Updated Cart` on saves that do not change cart content.
+     */
+    public function buildCartFingerprint(Order $order): string
+    {
+        $parts = [];
+
+        foreach ($order->getLineItems() as $lineItem) {
+            $parts[] = sprintf(
+                '%d:%d:%s',
+                (int)$lineItem->purchasableId,
+                (int)$lineItem->qty,
+                (string)$lineItem->id,
+            );
+        }
+
+        sort($parts, SORT_STRING);
+
+        return hash(
+            'sha256',
+            implode('|', $parts) . '|' . number_format((float)$order->getTotal(), 4, '.', ''),
+        );
+    }
+
+    public function hasCartContentChanged(Order $order, ?string $previousFingerprint): bool
+    {
+        return $previousFingerprint !== $this->buildCartFingerprint($order);
     }
 
     public function trackPlacedOrder(Order $order, ?\DateTimeInterface $occurredAt = null): void
@@ -286,5 +364,24 @@ class OrderTrackingService extends Component
         $record->eventType = $eventType;
 
         return $record->save();
+    }
+
+    private function resolveFingerprintCache(): CacheInterface
+    {
+        if ($this->fingerprintCache !== null) {
+            return $this->fingerprintCache;
+        }
+
+        $cache = Craft::$app->getCache();
+        if ($cache === null) {
+            throw new \RuntimeException('Craft application cache is not configured.');
+        }
+
+        return $cache;
+    }
+
+    private function updatedCartCacheKey(int $orderId): string
+    {
+        return 'commerceklaviyo:updated-cart:' . $orderId;
     }
 }

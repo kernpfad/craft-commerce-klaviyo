@@ -21,8 +21,11 @@ use craft\commerce\services\Payments;
 use craft\events\ModelEvent;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\TemplateEvent;
+use craft\services\Fields;
 use craft\services\Utilities;
 use craft\web\View;
+use kernpfad\commerceklaviyo\fields\ListField;
+use kernpfad\commerceklaviyo\fields\ListsField;
 use kernpfad\commerceklaviyo\models\Settings;
 use kernpfad\commerceklaviyo\services\BackInStockSubscriptionService;
 use kernpfad\commerceklaviyo\services\CatalogSyncService;
@@ -34,6 +37,7 @@ use kernpfad\commerceklaviyo\services\NewsletterSubscriptionService;
 use kernpfad\commerceklaviyo\services\OnsiteTrackingService;
 use kernpfad\commerceklaviyo\services\OrderTrackingService;
 use kernpfad\commerceklaviyo\services\ProfileMapper;
+use kernpfad\commerceklaviyo\services\TrackActionsService;
 use kernpfad\commerceklaviyo\utilities\HistoricalOrdersUtility;
 use verbb\formie\elements\Form as FormieForm;
 use verbb\formie\events\SubmissionEvent as FormieSubmissionEvent;
@@ -47,6 +51,7 @@ use yii\queue\Queue as YiiQueue;
  * @property NewsletterSubscriptionService $newsletterSubscription
  * @property BackInStockSubscriptionService $backInStockSubscription
  * @property HistoricalOrderSyncService $historicalOrderSync
+ * @property TrackActionsService $trackActions
  * @method Settings getSettings()
  */
 class CommerceKlaviyo extends Plugin
@@ -72,6 +77,15 @@ class CommerceKlaviyo extends Plugin
         if (Craft::$app->getRequest()->getIsConsoleRequest()) {
             $this->controllerNamespace = 'kernpfad\\commerceklaviyo\\console\\controllers';
         }
+
+        Event::on(
+            Fields::class,
+            Fields::EVENT_REGISTER_FIELD_TYPES,
+            static function(RegisterComponentTypesEvent $event): void {
+                $event->types[] = ListField::class;
+                $event->types[] = ListsField::class;
+            }
+        );
 
         Event::on(
             Utilities::class,
@@ -111,6 +125,13 @@ class CommerceKlaviyo extends Plugin
             );
         });
 
+        $this->set('trackActions', function() {
+            return new TrackActionsService(
+                newsletterSubscription: $this->newsletterSubscription,
+                queue: $this->getSyncQueue(),
+            );
+        });
+
         $this->set('historicalOrderSync', function() {
             return new HistoricalOrderSyncService(
                 queue: $this->getSyncQueue(),
@@ -136,6 +157,10 @@ class CommerceKlaviyo extends Plugin
 
                 if (!$order->isCompleted) {
                     $this->orderTracking->trackStartedCheckout($order);
+
+                    if ($this->getSettings()->trackUpdatedCart) {
+                        $this->orderTracking->trackUpdatedCart($order);
+                    }
                 }
             }
         );
