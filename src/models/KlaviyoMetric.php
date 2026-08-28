@@ -12,6 +12,7 @@ namespace kernpfad\commerceklaviyo\models;
 class KlaviyoMetric
 {
     public const STARTED_CHECKOUT = 'Started Checkout';
+    public const UPDATED_CART = 'Updated Cart';
     public const PLACED_ORDER = 'Placed Order';
     public const ORDERED_PRODUCT = 'Ordered Product';
     public const FULFILLED_ORDER = 'Fulfilled Order';

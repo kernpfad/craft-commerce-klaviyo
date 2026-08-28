@@ -117,6 +117,10 @@ class CommerceKlaviyo extends Plugin
 
                 if (!$order->isCompleted) {
                     $this->orderTracking->trackStartedCheckout($order);
+
+                    if ($this->getSettings()->trackUpdatedCart) {
+                        $this->orderTracking->trackUpdatedCart($order);
+                    }
                 }
             }
         );
