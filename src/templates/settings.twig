@@ -516,6 +516,14 @@
     </div>
 
     <div class="tab-panel hidden" id="tab-panel-orderTracking" data-tab-panel="orderTracking">
+        {{ forms.checkboxField({
+            label: "Track Updated Cart"|t('commerce-klaviyo'),
+            instructions: "When on (default), incomplete carts with an email send Klaviyo’s \"Updated Cart\" event only if line items or the order total change — address-only saves are ignored. Turn off if you rely solely on onsite \"Added to Cart\" or want less event volume."|t('commerce-klaviyo'),
+            id: 'trackUpdatedCart',
+            name: 'trackUpdatedCart',
+            checked: settings.trackUpdatedCart,
+        }) }}
+
         {{ forms.checkboxSelectField({
             label: "Order statuses that mean \"fulfilled\""|t('commerce-klaviyo'),
             instructions: "Selecting one of these statuses sends Klaviyo's standard \"Fulfilled Order\" event."|t('commerce-klaviyo'),
@@ -541,6 +549,14 @@
             name: 'profileFieldMappingRaw',
             value: settings.profileFieldMappingRaw,
             rows: 6,
+        }) }}
+
+        {{ forms.checkboxField({
+            label: "Enable public track/identify actions"|t('commerce-klaviyo'),
+            instructions: "Off by default. When on, Twig forms may POST to `commerce-klaviyo/api/identify` and `commerce-klaviyo/api/track` (custom events, list subscribe, optional order tracking). Anonymous profile updates by email can be abused — only enable if your templates need Foster-style form actions."|t('commerce-klaviyo'),
+            id: 'publicTrackActionsEnabled',
+            name: 'publicTrackActionsEnabled',
+            checked: settings.publicTrackActionsEnabled,
         }) }}
     </div>
 

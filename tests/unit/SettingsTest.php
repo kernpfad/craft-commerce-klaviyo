@@ -100,6 +100,11 @@ class SettingsTest extends TestCase
         self::assertSame([], $settings->getCatalogFieldMapping());
     }
 
+    public function testTrackUpdatedCartDefaultsToTrue(): void
+    {
+        self::assertTrue((new Settings())->trackUpdatedCart);
+    }
+
     public function testGetApiKeyReturnsThePlainValueUnchanged(): void
     {
         $settings = new Settings();

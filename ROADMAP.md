@@ -56,10 +56,10 @@ KL-02 war bereits gelöst; KL-01/03/04 waren echte Lücken (kein Console-Command
 
 | ID | Item | Branch | Status |
 |---|---|---|---|
-| KL-13 | `Updated Cart` (gedämpft) + Cart Restore | `feature/abandoned-cart` | PR offen |
-| KL-14 | Twig identify/track/subscribe Actions | `feature/track-actions` | PR offen |
+| KL-13 | `Updated Cart` (gedämpft) + `trackUpdatedCart` + Cart Restore Action | `feature/abandoned-cart` | ✅ erledigt |
+| KL-14 | Twig identify/track/subscribe Actions | `feature/track-actions` | ✅ erledigt |
 | KL-15 | Klaviyo List / Lists Field Types | `feature/list-fields` | 🚧 in Arbeit |
-| KL-16 | Historical order backfill | `feature/historical-orders` | offen |
+| KL-16 | Historical order backfill | `feature/historical-orders` | offen (Welle 2) |
 
 ### Nicht tun
 
